@@ -17,6 +17,10 @@ filter_shoe_sizes=False
 shoe_sizes=["44", "45"]
 #-------------------------------------------------------------------
 
+#------------Notification config ---------------------------------------
+enable_notifications=False
+keywords =["Jordan","Bottines"]
+#-------------------------------------------------------------------
 
 #------------Timeout (change at your own discretion) ---------------
 TIMEOUT_TIME = 10
