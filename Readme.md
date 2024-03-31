@@ -1,4 +1,4 @@
-# Zalando Private Campaigns Scraper
+# Zalando Private Scraper
 
 This application is designed to automate the process of scraping campaign data from Zalando Private. It includes functionality for filtering specific items, sending notifications via Pushover based on specific keywords, and more. The application can run both in a headless mode for deployment on servers and in a GUI mode for development and testing purposes.
 

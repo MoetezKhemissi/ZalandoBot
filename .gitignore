@@ -2,3 +2,5 @@
 config.py
 campaign_scraper.log
 /__pycache__
+cookies.json
+local_storage.json

@@ -14,9 +14,43 @@ import os
 import logging
 import requests
 from config import *
-
+import json
 # Constants for login
 
+
+def save_session_data(driver, cookies_file='cookies.json', local_storage_file='local_storage.json'):
+    # Save cookies
+    with open(cookies_file, 'w') as f:
+        json.dump(driver.get_cookies(), f)
+
+    # Save local storage
+    local_storage = driver.execute_script("return JSON.stringify(window.localStorage);")
+    with open(local_storage_file, 'w') as f:
+        f.write(local_storage)
+    print("Session data saved.")
+
+def load_session_data(driver, cookies_file='cookies.json', local_storage_file='local_storage.json', domain=LOGIN_URL):
+    driver.get(domain)
+    time.sleep(3)
+    # Load and set cookies
+    try:
+        with open(cookies_file, 'r') as f:
+            cookies = json.load(f)
+            for cookie in cookies:
+                driver.add_cookie(cookie)
+    except FileNotFoundError:
+        print("Cookies file not found, skipping cookies loading.")
+
+    # Load and set local storage
+    try:
+        with open(local_storage_file, 'r') as f:
+            local_storage = f.read()
+            driver.execute_script(f"Object.entries(JSON.parse(arguments[0])).forEach(([key, value]) => window.localStorage.setItem(key, value));", local_storage)
+    except FileNotFoundError:
+        print("Local storage file not found, skipping local storage loading.")
+    time.sleep(3)
+    driver.get(domain)
+    print("Session data loaded.")
 
 def send_notification(item):
     if not enable_notifications:
@@ -88,55 +122,64 @@ def legacy_browser():
     if headless:
         options.add_argument('--headless')
         options.add_argument('--disable-gpu')
+        options.add_argument("window-size=1920,1080")
+        options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3')
     return webdriver.Edge(options=options)
 
-def login(driver, email, password):
-    driver.get(LOGIN_URL)
-    time.sleep(3)
-    # Click on "Connexion" button
-    connexion_button = WebDriverWait(driver, TIMEOUT_TIME).until(
-        EC.presence_of_element_located((By.XPATH, '//span[text()="Connexion"]/parent::span'))
-    )
-    connexion_button.click()
-    time.sleep(3)
-    # Click on the actual login prompt to get to the email/password fields
-    WebDriverWait(driver, TIMEOUT_TIME).until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, '[aria-labelledby="sso-login-lounge"]'))
-    ).click()
-    time.sleep(3)
-    # Enter email
-    email_input = WebDriverWait(driver, TIMEOUT_TIME).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="email"]'))
-    )
-    slow_type(email_input,email)
-    time.sleep(3)
-    # Enter password
-    password_input = WebDriverWait(driver, TIMEOUT_TIME).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="password"]'))
-    )
-    slow_type(password_input,password)
-    time.sleep(3)
-    # Click on login button
-    #TODO retry if uncessful
-    for attempt in range(3):
-        try:
-            login_button = WebDriverWait(driver, TIMEOUT_TIME).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="login_button"]'))
-            )
-            login_button.click()
+import logging
 
-            # Wait for redirection to occur with a timeout
-            WebDriverWait(driver, 10).until(EC.url_to_be(success_url))
-            logging.info("Successfully logged in and redirected.")
-            return  # If redirection is successful, exit the function
-        except TimeoutException:
-            # If the URL check times out, it means redirection did not occur as expected
-            logging.warning("Redirection did not occur as expected. Retrying...")
-            if attempt < 2:  # Wait before retrying unless it's the last attempt
-                time.sleep(3)
-    
-    # If the function reaches this point, login or redirection was not successful
-    logging.error("Failed to log in or redirect to the expected URL after 3 attempts.")
+def login(driver, email, password):
+    try:
+        logging.info("Navigating to login URL.")
+        driver.get(LOGIN_URL)
+        time.sleep(3)
+
+        logging.info("Attempting to click on 'Connexion' button.")
+        connexion_button = WebDriverWait(driver, TIMEOUT_TIME).until(
+            EC.presence_of_element_located((By.XPATH, '//span[text()="Connexion"]/parent::span'))
+        )
+        connexion_button.click()
+        time.sleep(3)
+
+        logging.info("Attempting to click on the actual login prompt.")
+        WebDriverWait(driver, TIMEOUT_TIME).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '[aria-labelledby="sso-login-lounge"]'))
+        ).click()
+        time.sleep(3)
+
+        logging.info("Attempting to enter email.")
+        email_input = WebDriverWait(driver, TIMEOUT_TIME).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="email"]'))
+        )
+        slow_type(email_input, email)
+        time.sleep(3)
+
+        logging.info("Attempting to enter password.")
+        password_input = WebDriverWait(driver, TIMEOUT_TIME).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'input[type="password"]'))
+        )
+        slow_type(password_input, password)
+        time.sleep(3)
+
+        logging.info("Attempting to click on login button.")
+        for attempt in range(3):
+            try:
+                login_button = WebDriverWait(driver, TIMEOUT_TIME).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="login_button"]'))
+                )
+                login_button.click()
+
+                # Wait for redirection to occur with a timeout
+                WebDriverWait(driver, 10).until(EC.url_to_be(success_url))
+                logging.info("Successfully logged in and redirected.")
+                return  # If redirection is successful, exit the function
+            except TimeoutException:
+                logging.warning(f"Attempt {attempt+1}: Redirection did not occur as expected. Retrying...")
+
+        logging.error("Failed to log in or redirect to the expected URL after 3 attempts.")
+    except Exception as e:
+        logging.error("An error occurred during the login process.", exc_info=True)
+
 
 def get_campaign_hrefs(driver):
     # Regular expression to match the specific campaign URL pattern
@@ -277,7 +320,7 @@ def login_to_site(driver, username, password):
         login(driver, username, password)
         logging.info("Done Login")
     except Exception as e:
-        logging.error('Could not login : ' , e)
+        logging.error('Could not login: %s', e)
 
 def create_campaigns_dir(directory):
     os.makedirs(directory, exist_ok=True)

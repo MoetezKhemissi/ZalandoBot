@@ -1,6 +1,7 @@
 from lowLevel import *
 
 
+
 if __name__ == "__main__":
 
     csv_columns = ['link', 'name', 'initial_price', 'final_price', 'out_of_stock', 'image_url']
@@ -16,8 +17,11 @@ if __name__ == "__main__":
     driver = setup_driver()
 
     logging.info("Logging into Zalando ..")
+    #Normal way to login if you are not using headless
     login_to_site(driver, USERNAME, PASSWORD)
-
+    #Hacky way to force login
+    #load_session_data(driver)
+    time.sleep(2)
     while True:
             logging.info("Fetching new campaigns...")
             get_and_process_campaigns(driver, campaigns_dir, csv_columns)
