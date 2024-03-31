@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Data</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h2>Filter CSV Data</h2>
+    <form action="/" method="get">
+        <label for="min_price">Min Final Price:</label>
+        <input type="number" id="min_price" name="min_price" step="0.01">
+        <label for="max_price">Max Final Price:</label>
+        <input type="number" id="max_price" name="max_price" step="0.01">
+        <label for="out_of_stock">Out of Stock:</label>
+        <select name="out_of_stock" id="out_of_stock">
+            <option value="">Select...</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+        </select>
+        <label for="search">Search:</label>
+<input type="text" id="search" name="search">
+<button type="submit">Filter</button>
+
+        <button type="submit">Filter</button>
+    </form>
+    <h2>CSV Data</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Initial Price</th>
+                <th>Final Price</th>
+                <th>Out of Stock</th>
+                <th>Image URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row['name'] }}</td>
+                <td>{{ row['initial_price'] }}</td>
+                <td>{{ row['final_price'] }}</td>
+                <td>{{ row['out_of_stock'] }}</td>
+                <td><img src="{{ row['image_url'] }}" alt="" style="width: 100px;"></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
